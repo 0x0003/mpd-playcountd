@@ -209,6 +209,9 @@ func main() {
 	if !seen["retries"] {
 		maxRetries = cfg.Retries
 	}
+	if !seen["quiet"] {
+		quiet = cfg.Quiet
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

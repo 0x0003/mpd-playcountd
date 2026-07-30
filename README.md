@@ -35,6 +35,7 @@ host = "127.0.0.1"
 port = 6600
 password = ""
 retries = 1
+quiet = false
 ```
 
 ## Build

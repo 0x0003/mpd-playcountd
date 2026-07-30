@@ -12,6 +12,7 @@ type config struct {
 	Port     int    `toml:"port"`
 	Password string `toml:"password"`
 	Retries  int    `toml:"retries"`
+	Quiet    bool   `toml:"quiet"`
 }
 
 func defaultConfig() config {
