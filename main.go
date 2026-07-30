@@ -149,6 +149,10 @@ func (mc *mpdConn) close() {
 	mc.conn.Close()
 }
 
+func logf(format string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, time.Now().Format("2006-01-02 15:04:05 ")+format, args...)
+}
+
 func escapeMPD(s string) string {
 	s = strings.ReplaceAll(s, "\\", "\\\\")
 	s = strings.ReplaceAll(s, "\"", "\\\"")
@@ -184,9 +188,9 @@ func main() {
 	for retries := 0; ; retries++ {
 		mc, err := dialMPD()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "[mpd_playcountd] %v\n", err)
+			logf("%v\n", err)
 			if retries >= maxRetries {
-				fmt.Fprintf(os.Stderr, "[mpd_playcountd] max retries reached, exiting\n")
+				logf("max retries reached, exiting\n")
 				os.Exit(1)
 			}
 			time.Sleep(3 * time.Second)
@@ -194,7 +198,7 @@ func main() {
 		}
 
 		retries = 0
-		fmt.Printf("[mpd_playcountd] connected\n")
+		logf("connected\n")
 
 	// Signal goroutine: close the connection to interrupt blocking I/O
 	// in idlePlayer. This makes the event loop exit cleanly.
@@ -235,11 +239,11 @@ func main() {
 
 			event, err := mc.idlePlayer()
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "[mpd_playcountd] idle error: %v\n", err)
+				logf("idle error: %v\n", err)
 				break eventLoop
 			}
 			if event != "" {
-				fmt.Printf("[mpd_playcountd] event: %s\n", event)
+				logf("event: %s\n", event)
 			}
 
 			if err := mc.cmd("currentsong"); err != nil {
@@ -281,12 +285,12 @@ func main() {
 				threshold = 240.0
 			}
 
-			fmt.Printf("[mpd_playcountd] state=%s file=%s elapsed=%.3f dur=%.3f threshold=%.3f counted=%v\n",
+			logf("state=%s file=%s elapsed=%.3f dur=%.3f threshold=%.3f counted=%v\n",
 				state, newFile, elapsed, dur, threshold, counted)
 
 			if state == "stop" {
 				if file != "" {
-					fmt.Printf("[mpd_playcountd] stopped\n")
+					logf("stopped\n")
 				}
 				file = ""
 				songID = ""
@@ -320,10 +324,10 @@ func main() {
 
 			if isNew || onRepeat {
 				if isNew {
-					fmt.Printf("[mpd_playcountd] song changed to: %s\n", newFile)
+					logf("song changed to: %s\n", newFile)
 				}
 				if onRepeat {
-					fmt.Printf("[mpd_playcountd] repeat detected\n")
+					logf("repeat detected\n")
 				}
 				file = newFile
 				songID = newSongID
@@ -339,7 +343,7 @@ func main() {
 			playedSeconds := accrued + time.Since(segmentStart)
 
 			if file != "" && !counted && playedSeconds.Seconds() >= threshold {
-				fmt.Printf("[mpd_playcountd] threshold reached!\n")
+				logf("threshold reached!\n")
 				ef := escapeMPD(file)
 
 				if err := mc.cmd(`sticker get song "%s" playCount`, ef); err != nil {
@@ -354,13 +358,13 @@ func main() {
 				}
 
 				pc++
-				fmt.Printf("[mpd_playcountd] playCount -> %d\n", pc)
+				logf("playCount -> %d\n", pc)
 				if err := mc.cmdOK(`sticker set song "%s" playCount %d`, ef, pc); err != nil {
 					break eventLoop
 				}
 
 				now := time.Now().Unix()
-				fmt.Printf("[mpd_playcountd] lastPlayed: %d\n", now)
+				logf("lastPlayed: %d\n", now)
 				if err := mc.cmdOK(`sticker set song "%s" lastPlayed %d`, ef, now); err != nil {
 					break eventLoop
 				}
@@ -371,7 +375,7 @@ func main() {
 			}
 			_, fpErr := mc.readResp()
 			if fpErr != nil {
-				fmt.Printf("[mpd_playcountd] firstPlayed: %d\n", now)
+				logf("firstPlayed: %d\n", now)
 				if err := mc.cmdOK(`sticker set song "%s" firstPlayed %d`, ef, now); err != nil {
 					break eventLoop
 				}
@@ -383,10 +387,10 @@ func main() {
 
 		iterCancel()
 		mc.close()
-		fmt.Printf("[mpd_playcountd] disconnected\n")
+		logf("disconnected\n")
 
 		if ctx.Err() != nil {
-			fmt.Printf("[mpd_playcountd] shutting down\n")
+			logf("shutting down\n")
 			return
 		}
 	}
