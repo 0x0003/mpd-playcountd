@@ -160,27 +160,50 @@ func escapeMPD(s string) string {
 }
 
 func main() {
-	hostDefault := "127.0.0.1"
-	passDefault := ""
-	if h := os.Getenv("MPD_HOST"); h != "" {
-		if at := strings.LastIndexByte(h, '@'); at >= 0 {
-			passDefault = h[:at]
-			h = h[at+1:]
-		}
-		hostDefault = h
-	}
-	portDefault := 6600
-	if p := os.Getenv("MPD_PORT"); p != "" {
-		if v, err := strconv.Atoi(p); err == nil {
-			portDefault = v
-		}
-	}
-
-	flag.StringVar(&mpdHost, "host", hostDefault, "MPD host")
-	flag.IntVar(&mpdPort, "port", portDefault, "MPD port")
+	var cfgPath string
+	flag.StringVar(&cfgPath, "config", configPath(), "config file path")
+	flag.StringVar(&mpdHost, "host", "127.0.0.1", "MPD host")
+	flag.IntVar(&mpdPort, "port", 6600, "MPD port")
 	flag.IntVar(&maxRetries, "retries", 1, "connection retry count before exiting")
-	flag.StringVar(&mpdPassword, "password", passDefault, "MPD password")
+	flag.StringVar(&mpdPassword, "password", "", "MPD password")
 	flag.Parse()
+
+	cfg := loadConfig(cfgPath)
+	seen := map[string]bool{}
+	flag.Visit(func(f *flag.Flag) { seen[f.Name] = true })
+
+	if !seen["host"] {
+		if h := os.Getenv("MPD_HOST"); h != "" {
+			if at := strings.LastIndexByte(h, '@'); at >= 0 {
+				mpdHost = h[at+1:]
+			} else {
+				mpdHost = h
+			}
+		} else {
+			mpdHost = cfg.Host
+		}
+	}
+	if !seen["port"] {
+		if p := os.Getenv("MPD_PORT"); p != "" {
+			if v, err := strconv.Atoi(p); err == nil {
+				mpdPort = v
+			}
+		} else {
+			mpdPort = cfg.Port
+		}
+	}
+	if !seen["password"] {
+		if h := os.Getenv("MPD_HOST"); h != "" {
+			if at := strings.LastIndexByte(h, '@'); at >= 0 {
+				mpdPassword = h[:at]
+			}
+		} else {
+			mpdPassword = cfg.Password
+		}
+	}
+	if !seen["retries"] {
+		maxRetries = cfg.Retries
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
