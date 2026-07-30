@@ -28,7 +28,7 @@ Precedence: **flag > env var > config file > default**.
 
 ### Config file
 
-Located at `$XDG_CONFIG_HOME/mpd-playcountd/config.toml` - typically `~/.config/mpd-playcountd/config.toml` on Linux, `%APPDATA%\mpd-playcountd\config.toml` on Windows.
+By default the program looks for a config file at `$XDG_CONFIG_HOME/mpd-playcountd/config.toml` - typically `~/.config/mpd-playcountd/config.toml` on Linux, and `%USERPROFILE%\.config\mpd-playcountd\config.toml` on Windows.
 
 ```toml
 host = "127.0.0.1"
