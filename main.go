@@ -20,6 +20,7 @@ var (
 	mpdPort     int
 	maxRetries  int
 	mpdPassword string
+	quiet       bool
 )
 
 type mpdConn struct {
@@ -150,6 +151,9 @@ func (mc *mpdConn) close() {
 }
 
 func logf(format string, args ...interface{}) {
+	if quiet {
+		return
+	}
 	fmt.Fprintf(os.Stderr, time.Now().Format("2006-01-02 15:04:05 ")+format, args...)
 }
 
@@ -166,6 +170,7 @@ func main() {
 	flag.IntVar(&mpdPort, "port", 6600, "MPD port")
 	flag.IntVar(&maxRetries, "retries", 1, "connection retry count before exiting")
 	flag.StringVar(&mpdPassword, "password", "", "MPD password")
+	flag.BoolVar(&quiet, "quiet", false, "suppress log output")
 	flag.Parse()
 
 	cfg := loadConfig(cfgPath)
