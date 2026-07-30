@@ -45,11 +45,10 @@ retries = 1
 go build -o mpd-playcountd .
 ```
 
-- nix
+- `nix`
 
 ```sh
-nix build
-nix develop
+nix build # the binary will be in ./result/bin/mpd-playcountd
 ```
 
 - cross-compile for Windows:
