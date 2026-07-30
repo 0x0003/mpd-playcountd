@@ -241,6 +241,7 @@ func main() {
 			songID       string
 			counted      bool
 			segmentStart time.Time
+			trackStart   time.Time // wall-clock when track started (like listenbrainz-mpd's listen_timestamp)
 			accrued      time.Duration
 			threshold    float64
 		)
@@ -325,6 +326,7 @@ func main() {
 				counted = false
 				accrued = 0
 				segmentStart = time.Time{}
+				trackStart = time.Time{} // stop resets everything
 				continue
 			}
 
@@ -362,8 +364,8 @@ func main() {
 				counted = false
 				accrued = 0
 				segmentStart = time.Time{}
+				trackStart = time.Now() // record start time once; used for sticker timestamps
 			}
-
 			if segmentStart.IsZero() {
 				segmentStart = time.Now()
 			}
@@ -391,9 +393,9 @@ func main() {
 					break eventLoop
 				}
 
-				now := time.Now().Unix()
-				logf("lastPlayed: %d\n", now)
-				if err := mc.cmdOK(`sticker set song "%s" lastPlayed %d`, ef, now); err != nil {
+				ts := trackStart.Unix() // use original start time, not current time
+				logf("lastPlayed: %d\n", ts)
+				if err := mc.cmdOK(`sticker set song "%s" lastPlayed %d`, ef, ts); err != nil {
 					break eventLoop
 				}
 
@@ -403,8 +405,8 @@ func main() {
 			}
 			_, fpErr := mc.readResp()
 			if fpErr != nil {
-				logf("firstPlayed: %d\n", now)
-				if err := mc.cmdOK(`sticker set song "%s" firstPlayed %d`, ef, now); err != nil {
+				logf("firstPlayed: %d\n", ts)
+				if err := mc.cmdOK(`sticker set song "%s" firstPlayed %d`, ef, ts); err != nil {
 					break eventLoop
 				}
 			}
