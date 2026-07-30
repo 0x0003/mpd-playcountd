@@ -16,9 +16,10 @@ import (
 )
 
 var (
-	mpdHost    string
-	mpdPort    int
-	maxRetries int
+	mpdHost     string
+	mpdPort     int
+	maxRetries  int
+	mpdPassword string
 )
 
 type mpdConn struct {
@@ -41,6 +42,12 @@ func dialMPD() (*mpdConn, error) {
 	if !strings.HasPrefix(line, "OK ") {
 		conn.Close()
 		return nil, fmt.Errorf("unexpected greeting: %s", line)
+	}
+	if mpdPassword != "" {
+		if err := mc.cmdOK("password %s", mpdPassword); err != nil {
+			conn.Close()
+			return nil, fmt.Errorf("auth: %w", err)
+		}
 	}
 	return mc, nil
 }
@@ -150,7 +157,12 @@ func escapeMPD(s string) string {
 
 func main() {
 	hostDefault := "127.0.0.1"
+	passDefault := ""
 	if h := os.Getenv("MPD_HOST"); h != "" {
+		if at := strings.LastIndexByte(h, '@'); at >= 0 {
+			passDefault = h[:at]
+			h = h[at+1:]
+		}
 		hostDefault = h
 	}
 	portDefault := 6600
@@ -163,6 +175,7 @@ func main() {
 	flag.StringVar(&mpdHost, "host", hostDefault, "MPD host")
 	flag.IntVar(&mpdPort, "port", portDefault, "MPD port")
 	flag.IntVar(&maxRetries, "retries", 1, "connection retry count before exiting")
+	flag.StringVar(&mpdPassword, "password", passDefault, "MPD password")
 	flag.Parse()
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
