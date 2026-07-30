@@ -23,17 +23,20 @@ jobs:
 
       - name: Build
         run: |
-          ext=""
-          if [ "${{ matrix.goos }}" = "windows" ]; then ext=".exe"; fi
+          version="${GITHUB_REF_NAME#v}"
+          exe="mpd-playcountd"
+          if [ "${{ matrix.goos }}" = "windows" ]; then exe="${exe}.exe"; fi
           mkdir -p dist
           GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build \
-            -o dist/mpd-playcountd-${{ matrix.goos }}-${{ matrix.goarch }}${ext} .
+            -o "dist/${exe}" .
+          cd dist
+          zip "../mpd-playcountd_${version}_${{ matrix.goos }}-${{ matrix.goarch }}.zip" "${exe}"
 
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: mpd-playcountd-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: dist/*
+          name: mpd-playcountd_${{ github.ref_name }}_${{ matrix.goos }}-${{ matrix.goarch }}
+          path: "mpd-playcountd_*.zip"
 
   release:
     needs: build
@@ -41,11 +44,10 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: mpd-playcountd-*
+          pattern: mpd-playcountd_*
           merge-multiple: true
-          path: dist
 
       - uses: softprops/action-gh-release@v2
         with:
-          files: dist/*
+          files: "*.zip"
           generate_release_notes: true
