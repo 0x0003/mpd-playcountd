@@ -39,21 +39,23 @@ retries = 1
 
 ## Build
 
-- bare `go`
+- bare go
 
 ```sh
 go build -o mpd-playcountd .
-```
-
-- `nix`
-
-```sh
-nix build # the binary will be in ./result/bin/mpd-playcountd
 ```
 
 - cross-compile for Windows:
 
 ```sh
 GOOS=windows GOARCH=amd64 go build -o mpd-playcountd.exe .
+```
+
+---
+
+- nix
+
+```sh
+nix build # the binary will be in ./result/bin/mpd-playcountd
 ```
 
