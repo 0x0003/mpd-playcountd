@@ -269,6 +269,7 @@ func main() {
 			trackStart   time.Time // wall-clock when the current listen started (anchored to connect time for the initial song)
 			accrued      time.Duration
 			threshold    float64
+			wasStopped   bool
 		)
 
 		// Anchor the current listen to the moment we connected, mirroring how
@@ -357,18 +358,42 @@ func main() {
 				state, newFile, elapsed, dur, threshold, counted)
 
 			if state == "stop" {
-				if file != "" {
+				if file != "" && !wasStopped {
 					logf("stopped\n")
 				}
-				file = ""
-				songID = ""
-				pos = ""
-				counted = false
-				accrued = 0
-				segmentStart = time.Time{}
-				trackStart = time.Time{} // stop resets everything
+				wasStopped = true
+				// Mirror listenbrainz-mpd: keep the current song (MPD reports
+				// it via currentsong while stopped). A song change here (e.g.
+				// the current song was deleted while paused) starts a fresh
+				// listen anchored to now; an unchanged song keeps its anchor,
+				// and resuming restarts the countdown from scratch.
+				if newFile != file || newSongID != songID || newPos != pos {
+					if newFile != "" {
+						file = newFile
+						songID = newSongID
+						pos = newPos
+						counted = false
+						accrued = 0
+						segmentStart = time.Time{}
+						trackStart = time.Now()
+						logf("song changed to: %s\n", newFile)
+					} else {
+						file = ""
+						songID = ""
+						pos = ""
+						counted = false
+						accrued = 0
+						segmentStart = time.Time{}
+						trackStart = time.Time{}
+					}
+				} else {
+					counted = false
+					accrued = 0
+					segmentStart = time.Time{}
+				}
 				continue
 			}
+			wasStopped = false
 
 			if state == "pause" {
 				if !segmentStart.IsZero() {
