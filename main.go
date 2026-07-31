@@ -173,37 +173,39 @@ func main() {
 	flag.BoolVar(&quiet, "quiet", false, "suppress log output")
 	flag.Parse()
 
-	cfg := loadConfig(cfgPath)
+	cfg, md := loadConfig(cfgPath)
 	seen := map[string]bool{}
 	flag.Visit(func(f *flag.Flag) { seen[f.Name] = true })
 
+	defined := func(key string) bool { return md.IsDefined(key) }
+
 	if !seen["host"] {
-		if h := os.Getenv("MPD_HOST"); h != "" {
+		if defined("host") {
+			mpdHost = cfg.Host
+		} else if h := os.Getenv("MPD_HOST"); h != "" {
 			if at := strings.LastIndexByte(h, '@'); at >= 0 {
 				mpdHost = h[at+1:]
 			} else {
 				mpdHost = h
 			}
-		} else {
-			mpdHost = cfg.Host
 		}
 	}
 	if !seen["port"] {
-		if p := os.Getenv("MPD_PORT"); p != "" {
+		if defined("port") {
+			mpdPort = cfg.Port
+		} else if p := os.Getenv("MPD_PORT"); p != "" {
 			if v, err := strconv.Atoi(p); err == nil {
 				mpdPort = v
 			}
-		} else {
-			mpdPort = cfg.Port
 		}
 	}
 	if !seen["password"] {
-		if h := os.Getenv("MPD_HOST"); h != "" {
+		if defined("password") {
+			mpdPassword = cfg.Password
+		} else if h := os.Getenv("MPD_HOST"); h != "" {
 			if at := strings.LastIndexByte(h, '@'); at >= 0 {
 				mpdPassword = h[:at]
 			}
-		} else {
-			mpdPassword = cfg.Password
 		}
 	}
 	if !seen["retries"] {

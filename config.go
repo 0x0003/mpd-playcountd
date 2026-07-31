@@ -33,16 +33,16 @@ func configPath() string {
 	return ""
 }
 
-func loadConfig(path string) config {
+func loadConfig(path string) (config, toml.MetaData) {
 	cfg := defaultConfig()
 	if path == "" {
-		return cfg
+		return cfg, toml.MetaData{}
 	}
-	_, err := toml.DecodeFile(path, &cfg)
+	md, err := toml.DecodeFile(path, &cfg)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			logf("config: %v\n", err)
 		}
 	}
-	return cfg
+	return cfg, md
 }

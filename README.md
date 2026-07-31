@@ -15,7 +15,7 @@ mpd-playcountd -config /path/to/config.toml
 
 ## Configuration
 
-Precedence: **flag > env var > config file > default**.
+Precedence: **flag > config file > env var > default**.
 
 | Flag        | Env var    | Default     | Description                                           |
 |-------------|------------|-------------|-------------------------------------------------------|
