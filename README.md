@@ -1,4 +1,5 @@
-Minimal MPD sticker daemon that tracks `playCount`, `lastPlayed`, and `firstPlayed` per song. Listens for the duration of half the song (up to 4 minutes) before recording a play - matching [listenbrainz-mpd](https://codeberg.org/elomatreb/listenbrainz-mpd) semantics.
+MPD sticker daemon that tracks `playCount`, `lastPlayed`, and `firstPlayed` per song. Records a play after the song has played for half its duration (up to 4 minutes).  
+The recording behavior mirrors [listenbrainz-mpd](https://codeberg.org/elomatreb/listenbrainz-mpd) where possible.
 
 - **playCount** - incremented each time the threshold is reached
 - **lastPlayed** - Unix timestamp of the most recent play
