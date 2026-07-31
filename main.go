@@ -104,12 +104,14 @@ func (mc *mpdConn) cmdOK(format string, args ...interface{}) error {
 	return fmt.Errorf("unexpected: %s", line)
 }
 
-// idlePlayer blocks in MPD idle mode, waiting for a player subsystem change.
+// idlePlayer blocks in MPD idle mode, waiting for a player or playlist
+// subsystem change (playlist events cover queue edits like reorders, which
+// listenbrainz-mpd treats as song changes).
 // The caller must set a ReadDeadline on mc.conn for adaptive timeout; if it
 // fires we send noidle to break out of idle and drain the response.
 // https://mpd.readthedocs.io/en/latest/protocol.html#command-reference
 func (mc *mpdConn) idlePlayer() (string, error) {
-	if err := mc.cmd("idle player"); err != nil {
+	if err := mc.cmd("idle player playlist"); err != nil {
 		return "", err
 	}
 
@@ -261,6 +263,7 @@ func main() {
 		var (
 			file         string
 			songID       string
+			pos          string // queue position, part of listenbrainz-mpd's same-song check
 			counted      bool
 			segmentStart time.Time
 			trackStart   time.Time // wall-clock when the current listen started (anchored to connect time for the initial song)
@@ -275,6 +278,7 @@ func main() {
 		} else if f := song["file"]; f != "" && status["state"] != "stop" {
 			file = f
 			songID = status["songid"]
+			pos = status["song"]
 			counted = false
 			accrued = 0
 			segmentStart = time.Time{}
@@ -328,6 +332,7 @@ func main() {
 			state := status["state"]
 			newFile := song["file"]
 			newSongID := status["songid"]
+			newPos := status["song"]
 			elapsedStr := status["elapsed"]
 			durStr := song["duration"]
 			repeatStr := status["repeat"]
@@ -357,6 +362,7 @@ func main() {
 				}
 				file = ""
 				songID = ""
+				pos = ""
 				counted = false
 				accrued = 0
 				segmentStart = time.Time{}
@@ -372,10 +378,11 @@ func main() {
 				// A song change while paused (e.g. skipping) starts a fresh
 				// listen anchored here, mirroring listenbrainz-mpd's
 				// start_new_listen, which runs regardless of play state.
-				if newFile != file || newSongID != songID {
+				if newFile != file || newSongID != songID || newPos != pos {
 					if newFile != "" {
 						file = newFile
 						songID = newSongID
+						pos = newPos
 						counted = false
 						accrued = 0
 						trackStart = time.Now()
@@ -386,7 +393,7 @@ func main() {
 			}
 
 			// state == "play"
-			isNew := newFile != file || newSongID != songID
+			isNew := newFile != file || newSongID != songID || newPos != pos
 			onRepeat := false
 			if !isNew && counted {
 				// Only restart the listen if the track looped in
@@ -408,6 +415,7 @@ func main() {
 				}
 				file = newFile
 				songID = newSongID
+				pos = newPos
 				counted = false
 				accrued = 0
 				segmentStart = time.Time{}
