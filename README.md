@@ -5,6 +5,13 @@ The recording behavior mirrors [listenbrainz-mpd](https://codeberg.org/elomatreb
 - **lastPlayed** - Unix timestamp of the most recent play
 - **firstPlayed** - Unix timestamp of the first recorded play
 
+## Why?
+
+Mostly for personal use in scripting. Check out [mpd-lastplayed](https://github.com/0x0003/scripts/blob/master/mpd-lastplayed) and [mpd-neverplayed](https://github.com/0x0003/scripts/blob/master/mpd-neverplayed) for playlist creation, and [mps](https://github.com/0x0003/scripts/blob/master/mps) for now-playing status.
+
+Also, some clients (e.g. [rmpc](https://github.com/mierak/rmpc/)) can read and display `playCount` and `lastPlayed` stickers.  
+`firstPlayed` isn't "formally" used anywhere as far as I'm aware.
+
 ## Usage
 
 ```sh
