@@ -1,5 +1,5 @@
 {
-  description = "MPD playcount+lastPlayed+firstPlayed sticker daemon";
+  description = "MPD sticker daemon that tracks playCount, lastPlayed, and firstPlayed per song.";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
