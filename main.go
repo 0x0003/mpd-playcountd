@@ -369,6 +369,19 @@ func main() {
 					accrued += time.Since(segmentStart)
 					segmentStart = time.Time{}
 				}
+				// A song change while paused (e.g. skipping) starts a fresh
+				// listen anchored here, mirroring listenbrainz-mpd's
+				// start_new_listen, which runs regardless of play state.
+				if newFile != file || newSongID != songID {
+					if newFile != "" {
+						file = newFile
+						songID = newSongID
+						counted = false
+						accrued = 0
+						trackStart = time.Now()
+						logf("song changed to: %s\n", newFile)
+					}
+				}
 				continue
 			}
 
