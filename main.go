@@ -150,6 +150,23 @@ func (mc *mpdConn) close() {
 	mc.conn.Close()
 }
 
+// queryPlayerState issues currentsong and status and returns both responses.
+func (mc *mpdConn) queryPlayerState() (song, status map[string]string, err error) {
+	if err = mc.cmd("currentsong"); err != nil {
+		return nil, nil, err
+	}
+	if song, err = mc.readResp(); err != nil {
+		return nil, nil, err
+	}
+	if err = mc.cmd("status"); err != nil {
+		return nil, nil, err
+	}
+	if status, err = mc.readResp(); err != nil {
+		return nil, nil, err
+	}
+	return song, status, nil
+}
+
 func logf(format string, args ...interface{}) {
 	if quiet {
 		return
@@ -233,9 +250,9 @@ func main() {
 		retries = 0
 		logf("connected\n")
 
-	// Signal goroutine: close the connection to interrupt blocking I/O
-	// in idlePlayer. This makes the event loop exit cleanly.
-	iterCtx, iterCancel := context.WithCancel(ctx)
+		// Signal goroutine: close the connection to interrupt blocking I/O
+		// in idlePlayer. This makes the event loop exit cleanly.
+		iterCtx, iterCancel := context.WithCancel(ctx)
 		go func(mc *mpdConn) {
 			<-iterCtx.Done()
 			mc.conn.Close()
@@ -246,10 +263,33 @@ func main() {
 			songID       string
 			counted      bool
 			segmentStart time.Time
-			trackStart   time.Time // wall-clock when track started (like listenbrainz-mpd's listen_timestamp)
+			trackStart   time.Time // wall-clock when the current listen started (anchored to connect time for the initial song)
 			accrued      time.Duration
 			threshold    float64
 		)
+
+		// Anchor the current listen to the moment we connected, mirroring how
+		// listenbrainz-mpd anchors its listen_timestamp at process start.
+		if song, status, err := mc.queryPlayerState(); err != nil {
+			logf("initial query failed: %v\n", err)
+		} else if f := song["file"]; f != "" && status["state"] != "stop" {
+			file = f
+			songID = status["songid"]
+			counted = false
+			accrued = 0
+			segmentStart = time.Time{}
+			if status["state"] == "play" {
+				segmentStart = time.Now()
+			}
+			trackStart = time.Now()
+			threshold = 240.0
+			if durStr := song["duration"]; durStr != "" && durStr != "0" {
+				if dur, err := strconv.ParseFloat(durStr, 64); err == nil {
+					threshold = math.Min(dur/2.0, 240.0)
+				}
+			}
+			logf("initial song: %s state=%s\n", f, status["state"])
+		}
 
 	eventLoop:
 		for {
@@ -280,18 +320,7 @@ func main() {
 				logf("event: %s\n", event)
 			}
 
-			if err := mc.cmd("currentsong"); err != nil {
-				break eventLoop
-			}
-			song, err := mc.readResp()
-			if err != nil {
-				break eventLoop
-			}
-
-			if err := mc.cmd("status"); err != nil {
-				break eventLoop
-			}
-			status, err := mc.readResp()
+			song, status, err := mc.queryPlayerState()
 			if err != nil {
 				break eventLoop
 			}
@@ -404,16 +433,16 @@ func main() {
 					break eventLoop
 				}
 
-			if err := mc.cmd(`sticker get song "%s" firstPlayed`, ef); err != nil {
-				break eventLoop
-			}
-			_, fpErr := mc.readResp()
-			if fpErr != nil {
-				logf("firstPlayed: %d\n", ts)
-				if err := mc.cmdOK(`sticker set song "%s" firstPlayed %d`, ef, ts); err != nil {
+				if err := mc.cmd(`sticker get song "%s" firstPlayed`, ef); err != nil {
 					break eventLoop
 				}
-			}
+				_, fpErr := mc.readResp()
+				if fpErr != nil {
+					logf("firstPlayed: %d\n", ts)
+					if err := mc.cmdOK(`sticker set song "%s" firstPlayed %d`, ef, ts); err != nil {
+						break eventLoop
+					}
+				}
 
 				counted = true
 			}
