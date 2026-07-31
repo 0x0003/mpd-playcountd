@@ -69,8 +69,8 @@ func (mc *mpdConn) cmd(format string, args ...interface{}) error {
 	return mc.bw.Flush()
 }
 
-// readResp reads MPD response pairs (key: value) until OK or ACK.
-// https://musicpd.org/doc/protocol/#command-format
+// readResp reads MPD response pairs until OK or ACK.
+// https://mpd.readthedocs.io/en/latest/protocol.html#responses
 func (mc *mpdConn) readResp() (map[string]string, error) {
 	resp := make(map[string]string)
 	for {
@@ -107,7 +107,7 @@ func (mc *mpdConn) cmdOK(format string, args ...interface{}) error {
 // idlePlayer blocks in MPD idle mode, waiting for a player subsystem change.
 // The caller must set a ReadDeadline on mc.conn for adaptive timeout; if it
 // fires we send noidle to break out of idle and drain the response.
-// https://musicpd.org/doc/protocol/#idle
+// https://mpd.readthedocs.io/en/latest/protocol.html#command-reference
 func (mc *mpdConn) idlePlayer() (string, error) {
 	if err := mc.cmd("idle player"); err != nil {
 		return "", err
@@ -367,7 +367,7 @@ func main() {
 				counted = false
 				accrued = 0
 				segmentStart = time.Time{}
-				trackStart = time.Now() // record start time once; used for sticker timestamps
+				trackStart = time.Now() // record start time once
 			}
 			if segmentStart.IsZero() {
 				segmentStart = time.Now()
@@ -402,7 +402,6 @@ func main() {
 					break eventLoop
 				}
 
-			// Only set firstPlayed if the sticker doesn't exist yet.
 			if err := mc.cmd(`sticker get song "%s" firstPlayed`, ef); err != nil {
 				break eventLoop
 			}
